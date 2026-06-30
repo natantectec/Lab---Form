@@ -2180,21 +2180,31 @@ function renderSavedList() {
   el.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:3rem;">⏳ טוען טפסים מהענן...</p>';
   _allSavedForms = [];
 
-  fetch(SHEETS_URL + '?action=list')
-    .then(r => r.json())
-    .then(res => {
-      if (res.status === 'ok' && res.forms && res.forms.length) {
-        _allSavedForms = res.forms.slice().reverse();
-        renderSavedCards(_allSavedForms);
-      } else if (res.status === 'ok') {
-        el.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:3rem;">אין טפסים שמורים עדיין</p>';
-      } else {
-        el.innerHTML = '<p style="color:var(--red); text-align:center; padding:3rem;">❌ שגיאה: ' + (res.message || 'לא ידוע') + '</p>';
-      }
-    })
-    .catch(() => {
-      el.innerHTML = '<p style="color:var(--red); text-align:center; padding:3rem;">❌ שגיאה בטעינה — בדוק חיבור אינטרנט</p>';
-    });
+  const cbName = 'ntList_' + Date.now();
+  const url = SHEETS_URL + '?action=list&callback=' + cbName;
+
+  window[cbName] = function(res) {
+    delete window[cbName];
+    document.getElementById(cbName + '_s')?.remove();
+    if (res.status === 'ok' && res.forms && res.forms.length) {
+      _allSavedForms = res.forms.slice().reverse();
+      renderSavedCards(_allSavedForms);
+    } else if (res.status === 'ok') {
+      el.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:3rem;">אין טפסים שמורים עדיין</p>';
+    } else {
+      el.innerHTML = '<p style="color:var(--red); text-align:center; padding:3rem;">❌ שגיאה: ' + (res.message || 'לא ידוע') + '</p>';
+    }
+  };
+
+  const s = document.createElement('script');
+  s.id = cbName + '_s';
+  s.src = url;
+  s.onerror = () => {
+    delete window[cbName];
+    s.remove();
+    el.innerHTML = '<p style="color:var(--red); text-align:center; padding:3rem;">❌ שגיאה בטעינה — בדוק חיבור אינטרנט</p>';
+  };
+  document.head.appendChild(s);
 }
 
 function renderSavedCards(forms) {
